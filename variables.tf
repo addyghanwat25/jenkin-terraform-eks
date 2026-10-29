@@ -1,35 +1,42 @@
 
-variable "ami_id" {
-  description = "Amazon Linux AMI ID for us-east-1"
+variable "aws_region" {
+  description = "AWS region"
   type        = string
+  default     = "us-east-1"
+}
 
-  validation {
-    condition     = can(regex("^ami-[0-9a-fA-F]+$", var.ami_id))
-    error_message = "Enter a valid AMI ID, such as ami-0123456789abcdef0."
-  }
+variable "cluster_name" {
+  description = "Name of the EKS cluster"
+  type        = string
+  default     = "student-eks-cluster"
+}
+
+variable "kubernetes_version" {
+  description = "Kubernetes version supported by EKS"
+  type        = string
+  default     = "1.33"
 }
 
 variable "instance_type" {
-  type    = string
-  default = "t3.micro"
-}
-
-variable "vpc_cidr" {
-  type    = string
-  default = "10.0.0.0/16"
-}
-
-variable "subnet_cidr" {
-  type    = string
-  default = "10.0.1.0/24"
-}
-
-variable "instance_name" {
-  type    = string
-  default = "Student-EC2"
-}
-variable "availability_zone" {
-  description = "Availability zone for the subnet"
+  description = "EC2 instance type for worker nodes"
   type        = string
-  default     = "us-east-1a"
+  default     = "t3.medium"
+}
+
+variable "desired_size" {
+  description = "Desired number of worker nodes"
+  type        = number
+  default     = 2
+}
+
+variable "min_size" {
+  description = "Minimum number of worker nodes"
+  type        = number
+  default     = 1
+}
+
+variable "max_size" {
+  description = "Maximum number of worker nodes"
+  type        = number
+  default     = 3
 }
