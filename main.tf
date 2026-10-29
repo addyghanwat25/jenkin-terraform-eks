@@ -1,83 +1,71 @@
 
-# VPC
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "Student-VPC"
-  }
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
-# Public Subnet
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.subnet_cidr
-  availability_zone       = var.availability_zone
+# VPC and networking
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.21.0"
+
+  name = "${var.cluster_name}-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs = slice(data.aws_availability_zones.available.names, 0, 2)
+
+  public_subnets = [
+    "10.0.1.0/24",
+    "10.0.2.0/24"
+  ]
+
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  # No NAT Gateway is created in this lab configuration.
+  enable_nat_gateway = false
+
   map_public_ip_on_launch = true
 
-  tags = {
-    Name = "Student-Public-Subnet"
-  }
-}
-
-# Internet Gateway
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "Student-IGW"
-  }
-}
-
-# Route Table
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
+  public_subnet_tags = {
+    "kubernetes.io/role/elb" = "1"
   }
 
   tags = {
-    Name = "Student-Public-RT"
+    Project = "Terraform-EKS"
   }
 }
 
-# Route Table Association
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
-}
+# EKS cluster and managed worker nodes
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "20.37.1"
 
-# Security Group - no inbound access by default
-resource "aws_security_group" "ec2_sg" {
-  name        = "student-ec2-sg"
-  description = "Outbound access only; no inbound rules"
-  vpc_id      = aws_vpc.main.id
+  cluster_name    = var.cluster_name
+  cluster_version = var.kubernetes_version
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  cluster_endpoint_public_access = true
+
+  # Permit the IAM identity running Terraform to administer the cluster.
+  enable_cluster_creator_admin_permissions = true
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.public_subnets
+
+  eks_managed_node_groups = {
+    default = {
+      name           = "${var.cluster_name}-nodes"
+      instance_types = [var.instance_type]
+
+      min_size     = var.min_size
+      max_size     = var.max_size
+      desired_size = var.desired_size
+
+      # Worker nodes are placed in the public subnets for this lab.
+      # Restrict access through security groups and IAM.
+    }
   }
 
   tags = {
-    Name = "Student-EC2-SG"
-  }
-}
-
-# EC2 Instance
-resource "aws_instance" "web" {
-  ami                         = var.ami_id
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.public.id
-  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
-  associate_public_ip_address = true
-
-  tags = {
-    Name = var.instance_name
+    Project = "Terraform-EKS"
   }
 }
