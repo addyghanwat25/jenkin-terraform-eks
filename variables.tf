@@ -24,11 +24,6 @@ variable "subnet_cidr" {
   default = "10.0.1.0/24"
 }
 
-variable "availability_zone" {
-  type    = string
-  default = "us-east-1a"
-}
-
 variable "instance_name" {
   type    = string
   default = "Student-EC2"
