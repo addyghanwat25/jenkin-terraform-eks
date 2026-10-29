@@ -20,10 +20,7 @@ module "vpc" {
 
   enable_dns_hostnames = true
   enable_dns_support   = true
-
-  # No NAT Gateway is created in this lab configuration.
-  enable_nat_gateway = false
-
+  enable_nat_gateway   = false
   map_public_ip_on_launch = true
 
   public_subnet_tags = {
@@ -45,7 +42,7 @@ module "eks" {
 
   cluster_endpoint_public_access = true
 
-  # Permit the IAM identity running Terraform to administer the cluster.
+  # Allow the Terraform identity to administer the cluster
   enable_cluster_creator_admin_permissions = true
 
   vpc_id     = module.vpc.vpc_id
@@ -53,15 +50,15 @@ module "eks" {
 
   eks_managed_node_groups = {
     default = {
-      name           = "${var.cluster_name}-nodes"
+      name           = "nodes"
       instance_types = [var.instance_type]
 
       min_size     = var.min_size
       max_size     = var.max_size
       desired_size = var.desired_size
 
-      # Worker nodes are placed in the public subnets for this lab.
-      # Restrict access through security groups and IAM.
+      iam_role_name            = "${var.cluster_name}-node-role"
+      iam_role_use_name_prefix = false
     }
   }
 
