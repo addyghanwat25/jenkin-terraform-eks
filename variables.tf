@@ -28,3 +28,8 @@ variable "instance_name" {
   type    = string
   default = "Student-EC2"
 }
+variable "availability_zone" {
+  description = "Availability zone for the subnet"
+  type        = string
+  default     = "us-east-1a"
+}
